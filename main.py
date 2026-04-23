@@ -6,7 +6,11 @@ import models
 
 models.Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="SIG Desa Prawoto API", version="1.0.0")
+app = FastAPI(
+    title="SIG Desa Prawoto API", 
+    version="1.0.0",
+    redirect_slashes=False  # Disable auto trailing slash redirect
+)
 
 app.add_middleware(
     CORSMiddleware,
