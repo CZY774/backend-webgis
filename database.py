@@ -13,7 +13,13 @@ if not DATABASE_URL:
 if not DATABASE_URL:
     raise ValueError("DATABASE_URL not found. Check Railway Variables tab.")
 
-engine = create_engine(DATABASE_URL)
+# Add SSL and connection pool settings for Neon
+engine = create_engine(
+    DATABASE_URL,
+    pool_pre_ping=True,
+    pool_recycle=300,
+    connect_args={"sslmode": "require"} if "neon" in DATABASE_URL else {}
+)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
