@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from typing import Optional
 from geoalchemy2.shape import to_shape
 from database import get_db
-from models import RW, Kependudukan
+from models_rev import RW, Kependudukan
 from routes.auth import get_current_admin
 import json
 
@@ -132,6 +132,7 @@ def update_kependudukan(
     for key, value in data.dict(exclude_unset=True).items():
         setattr(kependudukan, key, value)
 
+    kependudukan.updated_by = admin.id_admin
     db.commit()
     db.refresh(kependudukan)
     return {"message": "Kependudukan updated successfully"}
