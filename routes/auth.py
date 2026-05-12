@@ -1,18 +1,23 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 import bcrypt
 from jose import JWTError, jwt
 from datetime import datetime, timedelta
 from database import get_db
-from models import Admin
+from models_rev import Admin
 import os
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 router = APIRouter()
+limiter = Limiter(key_func=get_remote_address)
 
-SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-this")
+SECRET_KEY = os.getenv("SECRET_KEY")
+if not SECRET_KEY or SECRET_KEY == "your-secret-key-change-this-in-production":
+    raise ValueError("SECRET_KEY must be set to a secure random value")
 ALGORITHM = os.getenv("ALGORITHM", "HS256")
-ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "1440"))
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60"))
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/auth/login")
 
@@ -52,8 +57,11 @@ def get_current_admin(
 
 
 @router.post("/login")
+@limiter.limit("5/minute")
 def login(
-    form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)
+    request: Request,
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    db: Session = Depends(get_db),
 ):
     admin = db.query(Admin).filter(Admin.username == form_data.username).first()
     if not admin or not verify_password(form_data.password, admin.password):
@@ -67,7 +75,13 @@ def login(
 
 
 @router.post("/register")
-def register(username: str, password: str, db: Session = Depends(get_db)):
+def register(
+    username: str,
+    password: str,
+    db: Session = Depends(get_db),
+    current_admin: Admin = Depends(get_current_admin),
+):
+    """Register new admin - requires existing admin authentication"""
     existing = db.query(Admin).filter(Admin.username == username).first()
     if existing:
         raise HTTPException(status_code=400, detail="Username already exists")
