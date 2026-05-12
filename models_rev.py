@@ -103,6 +103,7 @@ class Kependudukan(Base):
     id_rw = Column(
         Integer, ForeignKey("rw.id_rw", ondelete="CASCADE"), unique=True, nullable=False
     )
+    jumlah_kk = Column(Integer, nullable=True)
     jumlah_warga = Column(Integer, nullable=False)
     laki_laki = Column(Integer, nullable=False)
     perempuan = Column(Integer, nullable=False)
