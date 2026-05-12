@@ -5,7 +5,7 @@ from typing import Optional
 from geoalchemy2.shape import to_shape, from_shape
 from shapely.geometry import shape
 from database import get_db
-from models import SDA
+from models_rev import SDA
 from routes.auth import get_current_admin
 import json
 
@@ -69,6 +69,8 @@ def create_sda(
         polygon=from_shape(geom, srid=4326),
         jenis_lahan=data.jenis_lahan,
         luas_ha=data.luas_ha,
+        created_by=admin.id_admin,
+        updated_by=admin.id_admin,
     )
     db.add(sda)
     db.commit()
@@ -95,6 +97,7 @@ def update_sda(
     if data.luas_ha:
         sda.luas_ha = data.luas_ha
 
+    sda.updated_by = admin.id_admin
     db.commit()
     db.refresh(sda)
     return {"message": "SDA updated successfully"}
