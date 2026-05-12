@@ -1,4 +1,13 @@
-from sqlalchemy import Column, Integer, String, DECIMAL, Text, TIMESTAMP, ForeignKey, Float
+from sqlalchemy import (
+    Column,
+    Integer,
+    String,
+    DECIMAL,
+    Text,
+    TIMESTAMP,
+    ForeignKey,
+    Float,
+)
 from sqlalchemy.sql import func
 from geoalchemy2 import Geometry
 from database import Base
@@ -64,7 +73,9 @@ class FotoWisata(Base):
 class Lahan(Base):
     __tablename__ = "lahan"
     id_lahan = Column(Integer, primary_key=True, index=True)
-    polygon = Column(Geometry(geometry_type="MULTIPOLYGON", srid=4326), nullable=False, index=True)
+    polygon = Column(
+        Geometry(geometry_type="MULTIPOLYGON", srid=4326), nullable=False, index=True
+    )
     jenis_lahan = Column(String(50), nullable=False, index=True)
     luas_ha = Column(DECIMAL(10, 4), nullable=False)
     created_at = Column(TIMESTAMP, server_default=func.now())
@@ -74,7 +85,9 @@ class Lahan(Base):
 class Jalan(Base):
     __tablename__ = "jalan"
     id_jalan = Column(Integer, primary_key=True, index=True)
-    geometry = Column(Geometry(geometry_type="MULTILINESTRING", srid=4326), nullable=False, index=True)
+    geometry = Column(
+        Geometry(geometry_type="MULTILINESTRING", srid=4326), nullable=False, index=True
+    )
     nama_jalan = Column(String(255), nullable=True)
     jenis = Column(String(50), nullable=False, index=True)
     permukaan = Column(String(50), nullable=True)
@@ -86,7 +99,9 @@ class Jalan(Base):
 class Sungai(Base):
     __tablename__ = "sungai"
     id_sungai = Column(Integer, primary_key=True, index=True)
-    geometry = Column(Geometry(geometry_type="MULTILINESTRING", srid=4326), nullable=False, index=True)
+    geometry = Column(
+        Geometry(geometry_type="MULTILINESTRING", srid=4326), nullable=False, index=True
+    )
     nama_sungai = Column(String(255), nullable=True)
     created_at = Column(TIMESTAMP, server_default=func.now())
     updated_at = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now())
@@ -95,7 +110,9 @@ class Sungai(Base):
 class SDA(Base):
     __tablename__ = "sda"
     id_sda = Column(Integer, primary_key=True, index=True)
-    polygon = Column(Geometry(geometry_type="MULTIPOLYGON", srid=4326), nullable=False, index=True)
+    polygon = Column(
+        Geometry(geometry_type="MULTIPOLYGON", srid=4326), nullable=False, index=True
+    )
     jenis_lahan = Column(String(50), nullable=False, index=True)
     luas_ha = Column(DECIMAL(10, 4), nullable=False)
     created_at = Column(TIMESTAMP, server_default=func.now())
@@ -106,7 +123,9 @@ class RW(Base):
     __tablename__ = "rw"
     id_rw = Column(Integer, primary_key=True, index=True)
     nomor_rw = Column(Integer, unique=True, nullable=False)
-    polygon = Column(Geometry(geometry_type="MULTIPOLYGON", srid=4326), nullable=False, index=True)
+    polygon = Column(
+        Geometry(geometry_type="MULTIPOLYGON", srid=4326), nullable=False, index=True
+    )
     created_at = Column(TIMESTAMP, server_default=func.now())
     updated_at = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now())
 

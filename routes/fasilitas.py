@@ -42,7 +42,9 @@ def create_fasilitas(
     db: Session = Depends(get_db),
     admin=Depends(get_current_admin),
 ):
-    fasilitas = Fasilitas(**data.dict(), created_by=admin.id_admin, updated_by=admin.id_admin)
+    fasilitas = Fasilitas(
+        **data.dict(), created_by=admin.id_admin, updated_by=admin.id_admin
+    )
     db.add(fasilitas)
     db.commit()
     db.refresh(fasilitas)
@@ -62,7 +64,7 @@ def update_fasilitas(
 
     for key, value in data.dict(exclude_unset=True).items():
         setattr(fasilitas, key, value)
-    
+
     fasilitas.updated_by = admin.id_admin
     db.commit()
     db.refresh(fasilitas)

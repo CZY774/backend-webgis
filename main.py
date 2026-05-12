@@ -37,7 +37,17 @@ def health():
 
 
 # Import and include routes
-from routes import auth, fasilitas, umkm, wisata, sda, kependudukan, jalan, sungai, lahan
+from routes import (
+    auth,
+    fasilitas,
+    umkm,
+    wisata,
+    sda,
+    kependudukan,
+    jalan,
+    sungai,
+    lahan,
+)
 
 app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
 app.include_router(fasilitas.router, prefix="/api/fasilitas", tags=["Fasilitas"])

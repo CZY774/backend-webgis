@@ -100,12 +100,14 @@ def upload_foto_wisata(
     wisata = db.query(Wisata).filter(Wisata.id_wisata == data.id_wisata).first()
     if not wisata:
         raise HTTPException(status_code=404, detail="Wisata not found")
-    
+
     # Check photo count limit
-    photo_count = db.query(FotoWisata).filter(FotoWisata.id_wisata == data.id_wisata).count()
+    photo_count = (
+        db.query(FotoWisata).filter(FotoWisata.id_wisata == data.id_wisata).count()
+    )
     if photo_count >= 15:
         raise HTTPException(status_code=400, detail="Maximum 15 photos per wisata")
-    
+
     foto = FotoWisata(
         id_wisata=data.id_wisata,
         foto_base64=data.foto_base64,
@@ -123,7 +125,7 @@ def get_wisata_photos(id: int, db: Session = Depends(get_db)):
     wisata = db.query(Wisata).filter(Wisata.id_wisata == id).first()
     if not wisata:
         raise HTTPException(status_code=404, detail="Wisata not found")
-    
+
     photos = db.query(FotoWisata).filter(FotoWisata.id_wisata == id).all()
     return photos
 
@@ -138,7 +140,7 @@ def delete_foto_wisata(
     foto = db.query(FotoWisata).filter(FotoWisata.id_foto == id_foto).first()
     if not foto:
         raise HTTPException(status_code=404, detail="Photo not found")
-    
+
     db.delete(foto)
     db.commit()
     return {"message": "Photo deleted successfully"}

@@ -2,8 +2,10 @@
 Migration script to add GIST spatial indexes and audit trail columns
 Run this ONCE after deploying to Neon database
 """
+
 import sys
 import os
+
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from sqlalchemy import text
@@ -65,9 +67,9 @@ print("-" * 60)
 try:
     with engine.connect() as conn:
         # Execute each statement separately
-        for statement in migration_sql.strip().split(';'):
+        for statement in migration_sql.strip().split(";"):
             statement = statement.strip()
-            if statement and not statement.startswith('--'):
+            if statement and not statement.startswith("--"):
                 conn.execute(text(statement))
         conn.commit()
         print("✓ Migration completed successfully!")

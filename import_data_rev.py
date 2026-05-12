@@ -12,10 +12,12 @@ from shapely import wkt
 import openpyxl
 import json
 
+
 # Helper function to force 2D geometry
 def force_2d(geom):
     """Strip Z dimension from geometry"""
     return wkt.loads(wkt.dumps(geom, output_dimension=2))
+
 
 # Create tables
 models.Base.metadata.create_all(bind=engine)
@@ -30,7 +32,9 @@ wb = openpyxl.load_workbook("../../10. Data Web/2. Fasilitas/Fasilitas_rev.xlsx"
 ws = wb.active
 rows = list(ws.iter_rows(values_only=True))
 for row in rows[1:]:  # Skip header
-    fasilitas = models.Fasilitas(latitude=row[0], longitude=row[1], nama=row[2], jenis=row[3])
+    fasilitas = models.Fasilitas(
+        latitude=row[0], longitude=row[1], nama=row[2], jenis=row[3]
+    )
     db.add(fasilitas)
 db.commit()
 print(f"✓ Imported {len(rows) - 1} fasilitas")
@@ -79,17 +83,17 @@ with open("../../10. Data Web/4. Penggunaan Lahan/lahan.geojson", "r") as f:
     data = json.load(f)
     total_sda = 0
     skipped = 0
-    
+
     for feature in data["features"]:
         nomor = feature["properties"].get("nomor")
         jenis_lahan = nomor_to_jenis.get(str(nomor))
-        
+
         if not jenis_lahan:
             skipped += 1
             continue
-            
+
         geom = force_2d(shape(feature["geometry"]))
-        
+
         area_sq_deg = geom.area
         luas_ha = area_sq_deg * 12321
 
@@ -100,7 +104,7 @@ with open("../../10. Data Web/4. Penggunaan Lahan/lahan.geojson", "r") as f:
         )
         db.add(sda)
         total_sda += 1
-        
+
 db.commit()
 print(f"✓ Imported {total_sda} SDA polygons")
 if skipped > 0:
@@ -113,7 +117,7 @@ with open("../../10. Data Web/4. Penggunaan Lahan/jalan.geojson", "r") as f:
     for feature in data["features"]:
         props = feature["properties"]
         geom = force_2d(shape(feature["geometry"]))
-        
+
         jalan = models.Jalan(
             linestring=from_shape(geom, srid=4326),
             nama_jalan=props.get("nama_jalan"),
@@ -161,15 +165,13 @@ with open("../../10. Data Web/5. Kependudukan/Batas_RT.geojson", "r") as f:
         props = feature["properties"]
         rt_id = props["id"]
         rw_num = props["rw"]
-        
+
         # Find the RW record
         rw = db.query(models.RW).filter(models.RW.nomor_rw == rw_num).first()
         if rw:
             geom = force_2d(shape(feature["geometry"]))
             rt = models.RT(
-                nomor_rt=rt_id,
-                id_rw=rw.id_rw,
-                polygon=from_shape(geom, srid=4326)
+                nomor_rt=rt_id, id_rw=rw.id_rw, polygon=from_shape(geom, srid=4326)
             )
             db.add(rt)
 db.commit()
@@ -182,7 +184,7 @@ with open("../../10. Data Web/5. Kependudukan/Batas_Desa.geojson", "r") as f:
     for feature in data["features"]:
         props = feature["properties"]
         geom = force_2d(shape(feature["geometry"]))
-        
+
         desa = models.Desa(
             polygon=from_shape(geom, srid=4326),
             nama_desa=props.get("WADMKD", "Prawoto"),
@@ -199,22 +201,26 @@ print(f"✓ Imported {len(data['features'])} desa boundary")
 print("\n10. Importing Kependudukan data...")
 existing_kependudukan = db.query(models.Kependudukan).count()
 if existing_kependudukan > 0:
-    print(f"✓ Kependudukan data already exists ({existing_kependudukan} records), skipping...")
+    print(
+        f"✓ Kependudukan data already exists ({existing_kependudukan} records), skipping..."
+    )
 else:
-    wb = openpyxl.load_workbook("../../10. Data Web/5. Kependudukan/Kependudukan_rev.xlsx")
+    wb = openpyxl.load_workbook(
+        "../../10. Data Web/5. Kependudukan/Kependudukan_rev.xlsx"
+    )
     ws = wb.active
     rows = list(ws.iter_rows(values_only=True))
 
     rw_data = {}
     current_category = None
-    
+
     for i, row in enumerate(rows):
         if i == 0:
             continue
 
         kategori = row[0]
         subkategori = row[1]
-        
+
         # Track current category
         if kategori and kategori not in ["Data", "Jumlah KK"]:
             current_category = kategori

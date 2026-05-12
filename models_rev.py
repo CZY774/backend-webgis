@@ -1,4 +1,13 @@
-from sqlalchemy import Column, Integer, String, DECIMAL, Text, TIMESTAMP, ForeignKey, Float
+from sqlalchemy import (
+    Column,
+    Integer,
+    String,
+    DECIMAL,
+    Text,
+    TIMESTAMP,
+    ForeignKey,
+    Float,
+)
 from sqlalchemy.sql import func
 from geoalchemy2 import Geometry
 from database import Base
@@ -6,7 +15,7 @@ from database import Base
 
 class Admin(Base):
     __tablename__ = "admin"
-    __table_args__ = {'extend_existing': True}
+    __table_args__ = {"extend_existing": True}
     id_admin = Column(Integer, primary_key=True, index=True)
     username = Column(String(50), unique=True, nullable=False)
     password = Column(String(255), nullable=False)
@@ -16,7 +25,7 @@ class Admin(Base):
 
 class Fasilitas(Base):
     __tablename__ = "fasilitas"
-    __table_args__ = {'extend_existing': True}
+    __table_args__ = {"extend_existing": True}
     id_fasilitas = Column(Integer, primary_key=True, index=True)
     latitude = Column(DECIMAL(10, 8), nullable=False)
     longitude = Column(DECIMAL(11, 8), nullable=False)
@@ -30,7 +39,7 @@ class Fasilitas(Base):
 
 class UMKM(Base):
     __tablename__ = "umkm"
-    __table_args__ = {'extend_existing': True}
+    __table_args__ = {"extend_existing": True}
     id_umkm = Column(Integer, primary_key=True, index=True)
     latitude = Column(DECIMAL(10, 8), nullable=False)
     longitude = Column(DECIMAL(11, 8), nullable=False)
@@ -44,7 +53,7 @@ class UMKM(Base):
 
 class Wisata(Base):
     __tablename__ = "wisata"
-    __table_args__ = {'extend_existing': True}
+    __table_args__ = {"extend_existing": True}
     id_wisata = Column(Integer, primary_key=True, index=True)
     latitude = Column(DECIMAL(10, 8), nullable=False)
     longitude = Column(DECIMAL(11, 8), nullable=False)
@@ -60,7 +69,7 @@ class Wisata(Base):
 
 class FotoWisata(Base):
     __tablename__ = "foto_wisata"
-    __table_args__ = {'extend_existing': True}
+    __table_args__ = {"extend_existing": True}
     id_foto = Column(Integer, primary_key=True, index=True)
     id_wisata = Column(
         Integer,
@@ -75,7 +84,7 @@ class FotoWisata(Base):
 
 class SDA(Base):
     __tablename__ = "sda"
-    __table_args__ = {'extend_existing': True}
+    __table_args__ = {"extend_existing": True}
     id_sda = Column(Integer, primary_key=True, index=True)
     polygon = Column(Geometry(geometry_type="MULTIPOLYGON", srid=4326), nullable=False)
     jenis_lahan = Column(String(100), nullable=False, index=True)
@@ -88,7 +97,7 @@ class SDA(Base):
 
 class RW(Base):
     __tablename__ = "rw"
-    __table_args__ = {'extend_existing': True}
+    __table_args__ = {"extend_existing": True}
     id_rw = Column(Integer, primary_key=True, index=True)
     nomor_rw = Column(Integer, unique=True, nullable=False)
     polygon = Column(Geometry(geometry_type="MULTIPOLYGON", srid=4326), nullable=False)
@@ -98,7 +107,7 @@ class RW(Base):
 
 class Kependudukan(Base):
     __tablename__ = "kependudukan"
-    __table_args__ = {'extend_existing': True}
+    __table_args__ = {"extend_existing": True}
     id_kependudukan = Column(Integer, primary_key=True, index=True)
     id_rw = Column(
         Integer, ForeignKey("rw.id_rw", ondelete="CASCADE"), unique=True, nullable=False
@@ -128,11 +137,14 @@ class Kependudukan(Base):
 
 # New models for additional geographic features
 
+
 class Jalan(Base):
     __tablename__ = "jalan"
-    __table_args__ = {'extend_existing': True}
+    __table_args__ = {"extend_existing": True}
     id_jalan = Column(Integer, primary_key=True, index=True)
-    linestring = Column(Geometry(geometry_type="MULTILINESTRING", srid=4326), nullable=False)
+    linestring = Column(
+        Geometry(geometry_type="MULTILINESTRING", srid=4326), nullable=False
+    )
     nama_jalan = Column(String(255), nullable=True)
     jenis = Column(String(50), nullable=True, index=True)
     permukaan = Column(String(50), nullable=True)
@@ -143,9 +155,11 @@ class Jalan(Base):
 
 class Sungai(Base):
     __tablename__ = "sungai"
-    __table_args__ = {'extend_existing': True}
+    __table_args__ = {"extend_existing": True}
     id_sungai = Column(Integer, primary_key=True, index=True)
-    linestring = Column(Geometry(geometry_type="MULTILINESTRING", srid=4326), nullable=False)
+    linestring = Column(
+        Geometry(geometry_type="MULTILINESTRING", srid=4326), nullable=False
+    )
     nama_sungai = Column(String, nullable=True)
     created_at = Column(TIMESTAMP, server_default=func.now())
     updated_at = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now())
@@ -153,10 +167,12 @@ class Sungai(Base):
 
 class RT(Base):
     __tablename__ = "rt"
-    __table_args__ = {'extend_existing': True}
+    __table_args__ = {"extend_existing": True}
     id_rt = Column(Integer, primary_key=True, index=True)
     nomor_rt = Column(Integer, nullable=False)
-    id_rw = Column(Integer, ForeignKey("rw.id_rw", ondelete="CASCADE"), nullable=False, index=True)
+    id_rw = Column(
+        Integer, ForeignKey("rw.id_rw", ondelete="CASCADE"), nullable=False, index=True
+    )
     polygon = Column(Geometry(geometry_type="MULTIPOLYGON", srid=4326), nullable=False)
     created_at = Column(TIMESTAMP, server_default=func.now())
     updated_at = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now())
@@ -164,7 +180,7 @@ class RT(Base):
 
 class Desa(Base):
     __tablename__ = "desa"
-    __table_args__ = {'extend_existing': True}
+    __table_args__ = {"extend_existing": True}
     id_desa = Column(Integer, primary_key=True, index=True)
     polygon = Column(Geometry(geometry_type="MULTIPOLYGON", srid=4326), nullable=False)
     nama_desa = Column(String(100), nullable=False)
