@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import Optional
 from database import get_db
-from models import Fasilitas
+from models_rev import Fasilitas
 from routes.auth import get_current_admin
 
 router = APIRouter()
@@ -42,7 +42,7 @@ def create_fasilitas(
     db: Session = Depends(get_db),
     admin=Depends(get_current_admin),
 ):
-    fasilitas = Fasilitas(**data.dict())
+    fasilitas = Fasilitas(**data.dict(), created_by=admin.id_admin, updated_by=admin.id_admin)
     db.add(fasilitas)
     db.commit()
     db.refresh(fasilitas)
@@ -62,7 +62,8 @@ def update_fasilitas(
 
     for key, value in data.dict(exclude_unset=True).items():
         setattr(fasilitas, key, value)
-
+    
+    fasilitas.updated_by = admin.id_admin
     db.commit()
     db.refresh(fasilitas)
     return fasilitas
