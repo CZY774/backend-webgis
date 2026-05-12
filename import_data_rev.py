@@ -206,12 +206,18 @@ else:
     rows = list(ws.iter_rows(values_only=True))
 
     rw_data = {}
+    current_category = None
+    
     for i, row in enumerate(rows):
         if i == 0:
             continue
 
         kategori = row[0]
         subkategori = row[1]
+        
+        # Track current category
+        if kategori and kategori not in ["Data", "Jumlah KK"]:
+            current_category = kategori
 
         if kategori == "Jumlah Warga":
             for rw_num in range(1, 7):
@@ -219,14 +225,14 @@ else:
                     rw_data[rw_num] = {}
                 rw_data[rw_num]["jumlah_warga"] = row[rw_num + 1]
 
-        elif kategori == "Jenis Kelamin":
+        elif current_category == "Jenis Kelamin":
             for rw_num in range(1, 7):
                 if subkategori == "Laki-laki":
                     rw_data[rw_num]["laki_laki"] = row[rw_num + 1]
                 elif subkategori == "Perempuan":
                     rw_data[rw_num]["perempuan"] = row[rw_num + 1]
 
-        elif kategori == "Umur":
+        elif current_category == "Umur":
             for rw_num in range(1, 7):
                 if "Anak-anak" in str(subkategori):
                     rw_data[rw_num]["anak_anak"] = row[rw_num + 1]
@@ -235,7 +241,7 @@ else:
                 elif "Lansia" in str(subkategori):
                     rw_data[rw_num]["lansia"] = row[rw_num + 1]
 
-        elif kategori == "Pendidikan":
+        elif current_category == "Pendidikan":
             for rw_num in range(1, 7):
                 if "Tidak/Belum" in str(subkategori):
                     rw_data[rw_num]["tidak_sekolah"] = row[rw_num + 1]
@@ -250,7 +256,7 @@ else:
                 elif "Diploma" in str(subkategori):
                     rw_data[rw_num]["diploma_s1"] = row[rw_num + 1]
 
-        elif kategori == "Pekerjaan":
+        elif current_category == "Pekerjaan":
             for rw_num in range(1, 7):
                 if "Belum/Tidak" in str(subkategori):
                     rw_data[rw_num]["belum_bekerja"] = row[rw_num + 1]
