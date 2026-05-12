@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import Optional
 from database import get_db
-from models import UMKM
+from models_rev import UMKM
 from routes.auth import get_current_admin
 
 router = APIRouter()
@@ -40,7 +40,7 @@ def get_umkm(id: int, db: Session = Depends(get_db)):
 def create_umkm(
     data: UMKMCreate, db: Session = Depends(get_db), admin=Depends(get_current_admin)
 ):
-    umkm = UMKM(**data.dict())
+    umkm = UMKM(**data.dict(), created_by=admin.id_admin, updated_by=admin.id_admin)
     db.add(umkm)
     db.commit()
     db.refresh(umkm)
@@ -61,6 +61,7 @@ def update_umkm(
     for key, value in data.dict(exclude_unset=True).items():
         setattr(umkm, key, value)
 
+    umkm.updated_by = admin.id_admin
     db.commit()
     db.refresh(umkm)
     return umkm
