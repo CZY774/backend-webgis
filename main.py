@@ -21,7 +21,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
 
@@ -47,6 +47,7 @@ from routes import (
     jalan,
     sungai,
     lahan,
+    desa,
 )
 
 app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
@@ -57,6 +58,7 @@ app.include_router(sda.router, prefix="/api/sda", tags=["SDA"])
 app.include_router(lahan.router, prefix="/api/lahan", tags=["Lahan"])
 app.include_router(jalan.router, prefix="/api/jalan", tags=["Jalan"])
 app.include_router(sungai.router, prefix="/api/sungai", tags=["Sungai"])
+app.include_router(desa.router)
 app.include_router(
     kependudukan.router, prefix="/api/kependudukan", tags=["Kependudukan"]
 )
