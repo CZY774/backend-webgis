@@ -53,6 +53,7 @@ def get_all_kependudukan(db: Session = Depends(get_db)):
             data.update(
                 {
                     "id_kependudukan": kependudukan.id_kependudukan,
+                    "jumlah_kk": kependudukan.jumlah_kk,
                     "jumlah_warga": kependudukan.jumlah_warga,
                     "laki_laki": kependudukan.laki_laki,
                     "perempuan": kependudukan.perempuan,
