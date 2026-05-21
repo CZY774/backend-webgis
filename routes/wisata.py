@@ -34,7 +34,23 @@ class FotoWisataUpload(BaseModel):
 
 @router.get("/")
 def get_all_wisata(db: Session = Depends(get_db)):
-    return db.query(Wisata).all()
+    wisata_list = db.query(Wisata).all()
+    result = []
+    for w in wisata_list:
+        # Get first photo if exists
+        first_photo = db.query(FotoWisata).filter(FotoWisata.id_wisata == w.id_wisata).first()
+        result.append({
+            "id_wisata": w.id_wisata,
+            "nama": w.nama,
+            "jenis": w.jenis,
+            "deskripsi": w.deskripsi,
+            "latitude": w.latitude,
+            "longitude": w.longitude,
+            "foto_base64": first_photo.foto_base64 if first_photo else w.foto_base64,
+            "created_at": w.created_at,
+            "updated_at": w.updated_at
+        })
+    return result
 
 
 @router.get("/{id}")
