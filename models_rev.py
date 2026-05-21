@@ -188,5 +188,6 @@ class Desa(Base):
     kabupaten = Column(String(100), nullable=True)
     provinsi = Column(String(100), nullable=True)
     luas_ha = Column(Float, nullable=True)
+    foto_base64 = Column(Text, nullable=True)
     created_at = Column(TIMESTAMP, server_default=func.now())
     updated_at = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now())
