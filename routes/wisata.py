@@ -1,12 +1,17 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import Optional
 from database import get_db
 from models_rev import Wisata, FotoWisata
 from routes.auth import get_current_admin
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+from utils import sanitize_input
+from image_utils import compress_base64_image
 
 router = APIRouter()
+limiter = Limiter(key_func=get_remote_address)
 
 
 class WisataCreate(BaseModel):
@@ -33,28 +38,36 @@ class FotoWisataUpload(BaseModel):
 
 
 @router.get("/")
-def get_all_wisata(db: Session = Depends(get_db)):
+@limiter.limit("100/minute")
+def get_all_wisata(request: Request, db: Session = Depends(get_db)):
     wisata_list = db.query(Wisata).all()
     result = []
     for w in wisata_list:
         # Get first photo if exists
-        first_photo = db.query(FotoWisata).filter(FotoWisata.id_wisata == w.id_wisata).first()
-        result.append({
-            "id_wisata": w.id_wisata,
-            "nama": w.nama,
-            "jenis": w.jenis,
-            "deskripsi": w.deskripsi,
-            "latitude": w.latitude,
-            "longitude": w.longitude,
-            "foto_base64": first_photo.foto_base64 if first_photo else w.foto_base64,
-            "created_at": w.created_at,
-            "updated_at": w.updated_at
-        })
+        first_photo = (
+            db.query(FotoWisata).filter(FotoWisata.id_wisata == w.id_wisata).first()
+        )
+        result.append(
+            {
+                "id_wisata": w.id_wisata,
+                "nama": w.nama,
+                "jenis": w.jenis,
+                "deskripsi": w.deskripsi,
+                "latitude": w.latitude,
+                "longitude": w.longitude,
+                "foto_base64": first_photo.foto_base64
+                if first_photo
+                else w.foto_base64,
+                "created_at": w.created_at,
+                "updated_at": w.updated_at,
+            }
+        )
     return result
 
 
 @router.get("/{id}")
-def get_wisata(id: int, db: Session = Depends(get_db)):
+@limiter.limit("100/minute")
+def get_wisata(request: Request, id: int, db: Session = Depends(get_db)):
     wisata = db.query(Wisata).filter(Wisata.id_wisata == id).first()
     if not wisata:
         raise HTTPException(status_code=404, detail="Wisata not found")
@@ -65,7 +78,21 @@ def get_wisata(id: int, db: Session = Depends(get_db)):
 def create_wisata(
     data: WisataCreate, db: Session = Depends(get_db), admin=Depends(get_current_admin)
 ):
-    wisata = Wisata(**data.dict(), created_by=admin.id_admin, updated_by=admin.id_admin)
+    # Compress photo if provided
+    foto_compressed = (
+        compress_base64_image(data.foto_base64) if data.foto_base64 else None
+    )
+
+    wisata = Wisata(
+        latitude=data.latitude,
+        longitude=data.longitude,
+        nama=sanitize_input(data.nama),
+        jenis=sanitize_input(data.jenis),
+        deskripsi=sanitize_input(data.deskripsi) if data.deskripsi else None,
+        foto_base64=foto_compressed,
+        created_by=admin.id_admin,
+        updated_by=admin.id_admin,
+    )
     db.add(wisata)
     db.commit()
     db.refresh(wisata)
@@ -83,8 +110,18 @@ def update_wisata(
     if not wisata:
         raise HTTPException(status_code=404, detail="Wisata not found")
 
-    for key, value in data.dict(exclude_unset=True).items():
-        setattr(wisata, key, value)
+    if data.latitude is not None:
+        wisata.latitude = data.latitude
+    if data.longitude is not None:
+        wisata.longitude = data.longitude
+    if data.nama is not None:
+        wisata.nama = sanitize_input(data.nama)
+    if data.jenis is not None:
+        wisata.jenis = sanitize_input(data.jenis)
+    if data.deskripsi is not None:
+        wisata.deskripsi = sanitize_input(data.deskripsi)
+    if data.foto_base64 is not None:
+        wisata.foto_base64 = compress_base64_image(data.foto_base64)
 
     wisata.updated_by = admin.id_admin
     db.commit()
@@ -124,9 +161,12 @@ def upload_foto_wisata(
     if photo_count >= 15:
         raise HTTPException(status_code=400, detail="Maximum 15 photos per wisata")
 
+    # Compress photo before saving
+    foto_compressed = compress_base64_image(data.foto_base64)
+
     foto = FotoWisata(
         id_wisata=data.id_wisata,
-        foto_base64=data.foto_base64,
+        foto_base64=foto_compressed,
         uploaded_by=admin.id_admin,
     )
     db.add(foto)
@@ -136,7 +176,8 @@ def upload_foto_wisata(
 
 
 @router.get("/{id}/photos")
-def get_wisata_photos(id: int, db: Session = Depends(get_db)):
+@limiter.limit("100/minute")
+def get_wisata_photos(request: Request, id: int, db: Session = Depends(get_db)):
     """Get all photos for a wisata"""
     wisata = db.query(Wisata).filter(Wisata.id_wisata == id).first()
     if not wisata:
