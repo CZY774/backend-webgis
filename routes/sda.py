@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import Optional
@@ -7,9 +7,12 @@ from shapely.geometry import shape
 from database import get_db
 from models_rev import SDA
 from routes.auth import get_current_admin
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 import json
 
 router = APIRouter()
+limiter = Limiter(key_func=get_remote_address)
 
 
 class SDACreate(BaseModel):
@@ -25,7 +28,8 @@ class SDAUpdate(BaseModel):
 
 
 @router.get("/")
-def get_all_sda(db: Session = Depends(get_db)):
+@limiter.limit("100/minute")
+def get_all_sda(request: Request, db: Session = Depends(get_db)):
     sda_list = db.query(SDA).all()
     result = []
     for sda in sda_list:
@@ -44,7 +48,8 @@ def get_all_sda(db: Session = Depends(get_db)):
 
 
 @router.get("/{id}")
-def get_sda(id: int, db: Session = Depends(get_db)):
+@limiter.limit("100/minute")
+def get_sda(request: Request, id: int, db: Session = Depends(get_db)):
     sda = db.query(SDA).filter(SDA.id_sda == id).first()
     if not sda:
         raise HTTPException(status_code=404, detail="SDA not found")
