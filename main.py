@@ -81,7 +81,7 @@ app.include_router(sda.router, prefix="/api/sda", tags=["SDA"])
 app.include_router(lahan.router, prefix="/api/lahan", tags=["Lahan"])
 app.include_router(jalan.router, prefix="/api/jalan", tags=["Jalan"])
 app.include_router(sungai.router, prefix="/api/sungai", tags=["Sungai"])
-app.include_router(desa.router)
+app.include_router(desa.router, prefix="/api/desa", tags=["Desa"])
 app.include_router(
     kependudukan.router, prefix="/api/kependudukan", tags=["Kependudukan"]
 )
