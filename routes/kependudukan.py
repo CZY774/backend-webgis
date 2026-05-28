@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import Optional
@@ -6,9 +6,12 @@ from geoalchemy2.shape import to_shape
 from database import get_db
 from models_rev import RW, Kependudukan
 from routes.auth import get_current_admin
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 import json
 
 router = APIRouter()
+limiter = Limiter(key_func=get_remote_address)
 
 
 class KependudukanUpdate(BaseModel):
@@ -33,7 +36,8 @@ class KependudukanUpdate(BaseModel):
 
 
 @router.get("/")
-def get_all_kependudukan(db: Session = Depends(get_db)):
+@limiter.limit("100/minute")
+def get_all_kependudukan(request: Request, db: Session = Depends(get_db)):
     result = []
     rw_list = db.query(RW).all()
 
@@ -81,7 +85,8 @@ def get_all_kependudukan(db: Session = Depends(get_db)):
 
 
 @router.get("/{id}")
-def get_kependudukan(id: int, db: Session = Depends(get_db)):
+@limiter.limit("100/minute")
+def get_kependudukan(request: Request, id: int, db: Session = Depends(get_db)):
     kependudukan = (
         db.query(Kependudukan).filter(Kependudukan.id_kependudukan == id).first()
     )
