@@ -1,19 +1,24 @@
 import html
+import re
 
 
-def sanitize_html(text):
-    """Escape HTML special characters to prevent XSS attacks"""
-    if text is None:
-        return None
-    return html.escape(str(text))
+def sanitize_input(text: str) -> str:
+    """Sanitize user input to prevent XSS attacks"""
+    if not text:
+        return text
 
+    # HTML escape
+    text = html.escape(text)
 
-def sanitize_dict(data):
-    """Recursively sanitize all string values in a dictionary"""
-    if isinstance(data, dict):
-        return {k: sanitize_dict(v) for k, v in data.items()}
-    elif isinstance(data, list):
-        return [sanitize_dict(item) for item in data]
-    elif isinstance(data, str):
-        return sanitize_html(data)
-    return data
+    # Remove any remaining script tags
+    text = re.sub(
+        r"<script[^>]*>.*?</script>", "", text, flags=re.IGNORECASE | re.DOTALL
+    )
+
+    # Remove javascript: protocol
+    text = re.sub(r"javascript:", "", text, flags=re.IGNORECASE)
+
+    # Remove on* event handlers
+    text = re.sub(r"\s*on\w+\s*=", "", text, flags=re.IGNORECASE)
+
+    return text
