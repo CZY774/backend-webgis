@@ -1,12 +1,16 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import Optional
 from database import get_db
 from models_rev import Fasilitas
 from routes.auth import get_current_admin
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+from utils import sanitize_input
 
 router = APIRouter()
+limiter = Limiter(key_func=get_remote_address)
 
 
 class FasilitasCreate(BaseModel):
@@ -24,12 +28,14 @@ class FasilitasUpdate(BaseModel):
 
 
 @router.get("/")
-def get_all_fasilitas(db: Session = Depends(get_db)):
+@limiter.limit("100/minute")
+def get_all_fasilitas(request: Request, db: Session = Depends(get_db)):
     return db.query(Fasilitas).all()
 
 
 @router.get("/{id}")
-def get_fasilitas(id: int, db: Session = Depends(get_db)):
+@limiter.limit("100/minute")
+def get_fasilitas(request: Request, id: int, db: Session = Depends(get_db)):
     fasilitas = db.query(Fasilitas).filter(Fasilitas.id_fasilitas == id).first()
     if not fasilitas:
         raise HTTPException(status_code=404, detail="Fasilitas not found")
@@ -43,7 +49,12 @@ def create_fasilitas(
     admin=Depends(get_current_admin),
 ):
     fasilitas = Fasilitas(
-        **data.dict(), created_by=admin.id_admin, updated_by=admin.id_admin
+        latitude=data.latitude,
+        longitude=data.longitude,
+        nama=sanitize_input(data.nama),
+        jenis=sanitize_input(data.jenis),
+        created_by=admin.id_admin,
+        updated_by=admin.id_admin,
     )
     db.add(fasilitas)
     db.commit()
@@ -62,8 +73,14 @@ def update_fasilitas(
     if not fasilitas:
         raise HTTPException(status_code=404, detail="Fasilitas not found")
 
-    for key, value in data.dict(exclude_unset=True).items():
-        setattr(fasilitas, key, value)
+    if data.latitude is not None:
+        fasilitas.latitude = data.latitude
+    if data.longitude is not None:
+        fasilitas.longitude = data.longitude
+    if data.nama is not None:
+        fasilitas.nama = sanitize_input(data.nama)
+    if data.jenis is not None:
+        fasilitas.jenis = sanitize_input(data.jenis)
 
     fasilitas.updated_by = admin.id_admin
     db.commit()
