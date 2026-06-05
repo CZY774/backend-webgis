@@ -18,6 +18,11 @@ class UMKMCreate(BaseModel):
     longitude: float
     nama: str
     jenis: str
+    pemilik: Optional[str] = None
+    lokasi: Optional[str] = None
+    produk: Optional[str] = None
+    jam_operasional: Optional[str] = None
+    fasilitas_pendukung: Optional[str] = None
 
 
 class UMKMUpdate(BaseModel):
@@ -25,6 +30,11 @@ class UMKMUpdate(BaseModel):
     longitude: Optional[float] = None
     nama: Optional[str] = None
     jenis: Optional[str] = None
+    pemilik: Optional[str] = None
+    lokasi: Optional[str] = None
+    produk: Optional[str] = None
+    jam_operasional: Optional[str] = None
+    fasilitas_pendukung: Optional[str] = None
 
 
 @router.get("/")
@@ -51,6 +61,15 @@ def create_umkm(
         longitude=data.longitude,
         nama=sanitize_input(data.nama),
         jenis=sanitize_input(data.jenis),
+        pemilik=sanitize_input(data.pemilik) if data.pemilik else None,
+        lokasi=sanitize_input(data.lokasi) if data.lokasi else None,
+        produk=sanitize_input(data.produk) if data.produk else None,
+        jam_operasional=sanitize_input(data.jam_operasional)
+        if data.jam_operasional
+        else None,
+        fasilitas_pendukung=sanitize_input(data.fasilitas_pendukung)
+        if data.fasilitas_pendukung
+        else None,
         created_by=admin.id_admin,
         updated_by=admin.id_admin,
     )
@@ -79,6 +98,16 @@ def update_umkm(
         umkm.nama = sanitize_input(data.nama)
     if data.jenis is not None:
         umkm.jenis = sanitize_input(data.jenis)
+    if data.pemilik is not None:
+        umkm.pemilik = sanitize_input(data.pemilik)
+    if data.lokasi is not None:
+        umkm.lokasi = sanitize_input(data.lokasi)
+    if data.produk is not None:
+        umkm.produk = sanitize_input(data.produk)
+    if data.jam_operasional is not None:
+        umkm.jam_operasional = sanitize_input(data.jam_operasional)
+    if data.fasilitas_pendukung is not None:
+        umkm.fasilitas_pendukung = sanitize_input(data.fasilitas_pendukung)
 
     umkm.updated_by = admin.id_admin
     db.commit()
