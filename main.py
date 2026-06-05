@@ -10,8 +10,10 @@ import os
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
+from migrate_data_fix_schema import ensure_data_fix_schema
 
 models.Base.metadata.create_all(bind=engine)
+ensure_data_fix_schema()
 
 limiter = Limiter(key_func=get_remote_address)
 app = FastAPI(title="SIG Desa Prawoto API", version="1.0.0")
