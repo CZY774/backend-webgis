@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from typing import Optional
 from geoalchemy2.shape import to_shape
 from database import get_db
-from models_rev import RW, Kependudukan
+from models_rev import RW, RT, Kependudukan, KependudukanRT
 from routes.auth import get_current_admin
 from slowapi import Limiter
 from slowapi.util import get_remote_address
@@ -39,6 +39,34 @@ class KependudukanUpdate(BaseModel):
 @limiter.limit("100/minute")
 def get_all_kependudukan(request: Request, db: Session = Depends(get_db)):
     result = []
+    rt_count = db.query(KependudukanRT).count()
+
+    if rt_count:
+        rt_list = db.query(RT).order_by(RT.id_rw, RT.nomor_rt).all()
+        for rt in rt_list:
+            kependudukan = (
+                db.query(KependudukanRT)
+                .filter(KependudukanRT.id_rt == rt.id_rt)
+                .first()
+            )
+            geom = to_shape(rt.polygon)
+
+            rw = db.query(RW).filter(RW.id_rw == rt.id_rw).first()
+            data = {
+                "id_rt": rt.id_rt,
+                "nomor_rt": rt.nomor_rt,
+                "id_rw": rt.id_rw,
+                "nomor_rw": rw.nomor_rw if rw else None,
+                "polygon": json.dumps(geom.__geo_interface__),
+            }
+
+            if kependudukan:
+                data.update(kependudukan_to_dict(kependudukan))
+
+            result.append(data)
+
+        return result
+
     rw_list = db.query(RW).all()
 
     for rw in rw_list:
@@ -87,6 +115,23 @@ def get_all_kependudukan(request: Request, db: Session = Depends(get_db)):
 @router.get("/{id}")
 @limiter.limit("100/minute")
 def get_kependudukan(request: Request, id: int, db: Session = Depends(get_db)):
+    kependudukan_rt = (
+        db.query(KependudukanRT).filter(KependudukanRT.id_kependudukan_rt == id).first()
+    )
+    if kependudukan_rt:
+        rt = db.query(RT).filter(RT.id_rt == kependudukan_rt.id_rt).first()
+        rw = db.query(RW).filter(RW.id_rw == rt.id_rw).first() if rt else None
+        geom = to_shape(rt.polygon)
+        data = {
+            "id_rt": rt.id_rt,
+            "nomor_rt": rt.nomor_rt,
+            "id_rw": rt.id_rw,
+            "nomor_rw": rw.nomor_rw if rw else None,
+            "polygon": json.dumps(geom.__geo_interface__),
+        }
+        data.update(kependudukan_to_dict(kependudukan_rt))
+        return data
+
     kependudukan = (
         db.query(Kependudukan).filter(Kependudukan.id_kependudukan == id).first()
     )
@@ -129,6 +174,18 @@ def update_kependudukan(
     db: Session = Depends(get_db),
     admin=Depends(get_current_admin),
 ):
+    kependudukan_rt = (
+        db.query(KependudukanRT).filter(KependudukanRT.id_kependudukan_rt == id).first()
+    )
+    if kependudukan_rt:
+        for key, value in data.dict(exclude_unset=True).items():
+            setattr(kependudukan_rt, key, value)
+
+        kependudukan_rt.updated_by = admin.id_admin
+        db.commit()
+        db.refresh(kependudukan_rt)
+        return {"message": "Kependudukan RT updated successfully"}
+
     kependudukan = (
         db.query(Kependudukan).filter(Kependudukan.id_kependudukan == id).first()
     )
@@ -142,3 +199,29 @@ def update_kependudukan(
     db.commit()
     db.refresh(kependudukan)
     return {"message": "Kependudukan updated successfully"}
+
+
+def kependudukan_to_dict(kependudukan):
+    return {
+        "id_kependudukan": kependudukan.id_kependudukan_rt,
+        "id_kependudukan_rt": kependudukan.id_kependudukan_rt,
+        "jumlah_kk": kependudukan.jumlah_kk,
+        "jumlah_warga": kependudukan.jumlah_warga,
+        "laki_laki": kependudukan.laki_laki,
+        "perempuan": kependudukan.perempuan,
+        "anak_anak": kependudukan.anak_anak,
+        "produktif": kependudukan.produktif,
+        "lansia": kependudukan.lansia,
+        "tidak_sekolah": kependudukan.tidak_sekolah,
+        "tidak_tamat_sd": kependudukan.tidak_tamat_sd,
+        "tamat_sd": kependudukan.tamat_sd,
+        "sltp": kependudukan.sltp,
+        "slta": kependudukan.slta,
+        "diploma_s1": kependudukan.diploma_s1,
+        "belum_bekerja": kependudukan.belum_bekerja,
+        "pelajar": kependudukan.pelajar,
+        "mengurus_rt": kependudukan.mengurus_rt,
+        "wiraswasta": kependudukan.wiraswasta,
+        "petani": kependudukan.petani,
+        "lainnya": kependudukan.lainnya,
+    }
