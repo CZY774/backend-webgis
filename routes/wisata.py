@@ -20,6 +20,10 @@ class WisataCreate(BaseModel):
     nama: str
     jenis: str
     deskripsi: Optional[str] = None
+    cagar_budaya: Optional[str] = None
+    lokasi: Optional[str] = None
+    tarif: Optional[str] = None
+    fasilitas: Optional[str] = None
     foto_base64: Optional[str] = None
 
 
@@ -29,6 +33,10 @@ class WisataUpdate(BaseModel):
     nama: Optional[str] = None
     jenis: Optional[str] = None
     deskripsi: Optional[str] = None
+    cagar_budaya: Optional[str] = None
+    lokasi: Optional[str] = None
+    tarif: Optional[str] = None
+    fasilitas: Optional[str] = None
     foto_base64: Optional[str] = None
 
 
@@ -53,6 +61,10 @@ def get_all_wisata(request: Request, db: Session = Depends(get_db)):
                 "nama": w.nama,
                 "jenis": w.jenis,
                 "deskripsi": w.deskripsi,
+                "cagar_budaya": w.cagar_budaya,
+                "lokasi": w.lokasi,
+                "tarif": w.tarif,
+                "fasilitas": w.fasilitas,
                 "latitude": w.latitude,
                 "longitude": w.longitude,
                 "foto_base64": first_photo.foto_base64
@@ -89,6 +101,10 @@ def create_wisata(
         nama=sanitize_input(data.nama),
         jenis=sanitize_input(data.jenis),
         deskripsi=sanitize_input(data.deskripsi) if data.deskripsi else None,
+        cagar_budaya=sanitize_input(data.cagar_budaya) if data.cagar_budaya else None,
+        lokasi=sanitize_input(data.lokasi) if data.lokasi else None,
+        tarif=sanitize_input(data.tarif) if data.tarif else None,
+        fasilitas=sanitize_input(data.fasilitas) if data.fasilitas else None,
         foto_base64=foto_compressed,
         created_by=admin.id_admin,
         updated_by=admin.id_admin,
@@ -120,6 +136,14 @@ def update_wisata(
         wisata.jenis = sanitize_input(data.jenis)
     if data.deskripsi is not None:
         wisata.deskripsi = sanitize_input(data.deskripsi)
+    if data.cagar_budaya is not None:
+        wisata.cagar_budaya = sanitize_input(data.cagar_budaya)
+    if data.lokasi is not None:
+        wisata.lokasi = sanitize_input(data.lokasi)
+    if data.tarif is not None:
+        wisata.tarif = sanitize_input(data.tarif)
+    if data.fasilitas is not None:
+        wisata.fasilitas = sanitize_input(data.fasilitas)
     if data.foto_base64 is not None:
         wisata.foto_base64 = compress_base64_image(data.foto_base64)
 
