@@ -18,6 +18,10 @@ class FasilitasCreate(BaseModel):
     longitude: float
     nama: str
     jenis: str
+    deskripsi: Optional[str] = None
+    lokasi: Optional[str] = None
+    jam_operasional: Optional[str] = None
+    fasilitas_pendukung: Optional[str] = None
 
 
 class FasilitasUpdate(BaseModel):
@@ -25,6 +29,10 @@ class FasilitasUpdate(BaseModel):
     longitude: Optional[float] = None
     nama: Optional[str] = None
     jenis: Optional[str] = None
+    deskripsi: Optional[str] = None
+    lokasi: Optional[str] = None
+    jam_operasional: Optional[str] = None
+    fasilitas_pendukung: Optional[str] = None
 
 
 @router.get("/")
@@ -53,6 +61,14 @@ def create_fasilitas(
         longitude=data.longitude,
         nama=sanitize_input(data.nama),
         jenis=sanitize_input(data.jenis),
+        deskripsi=sanitize_input(data.deskripsi) if data.deskripsi else None,
+        lokasi=sanitize_input(data.lokasi) if data.lokasi else None,
+        jam_operasional=sanitize_input(data.jam_operasional)
+        if data.jam_operasional
+        else None,
+        fasilitas_pendukung=sanitize_input(data.fasilitas_pendukung)
+        if data.fasilitas_pendukung
+        else None,
         created_by=admin.id_admin,
         updated_by=admin.id_admin,
     )
@@ -81,6 +97,14 @@ def update_fasilitas(
         fasilitas.nama = sanitize_input(data.nama)
     if data.jenis is not None:
         fasilitas.jenis = sanitize_input(data.jenis)
+    if data.deskripsi is not None:
+        fasilitas.deskripsi = sanitize_input(data.deskripsi)
+    if data.lokasi is not None:
+        fasilitas.lokasi = sanitize_input(data.lokasi)
+    if data.jam_operasional is not None:
+        fasilitas.jam_operasional = sanitize_input(data.jam_operasional)
+    if data.fasilitas_pendukung is not None:
+        fasilitas.fasilitas_pendukung = sanitize_input(data.fasilitas_pendukung)
 
     fasilitas.updated_by = admin.id_admin
     db.commit()
