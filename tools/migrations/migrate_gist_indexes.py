@@ -4,12 +4,15 @@ Run this ONCE after deploying to Neon database
 """
 
 import sys
-import os
+from pathlib import Path
 
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+BACKEND_DIR = Path(__file__).resolve().parents[2]
+backend_path = str(BACKEND_DIR)
+if backend_path not in sys.path:
+    sys.path.insert(0, backend_path)
 
 from sqlalchemy import text
-from database import engine
+from app.database import engine
 
 # SQL commands for migration
 migration_sql = """
