@@ -3,15 +3,13 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import Optional
 from geoalchemy2.shape import to_shape
-from database import get_db
-from models_rev import RW, RT, Kependudukan, KependudukanRT
-from routes.auth import get_current_admin
-from slowapi import Limiter
-from slowapi.util import get_remote_address
+from app.database import get_db
+from app.models import RW, RT, Kependudukan, KependudukanRT
+from app.routes.auth import get_current_admin
+from app.rate_limit import limiter
 import json
 
 router = APIRouter()
-limiter = Limiter(key_func=get_remote_address)
 
 
 class KependudukanUpdate(BaseModel):
@@ -168,7 +166,9 @@ def get_kependudukan(request: Request, id: int, db: Session = Depends(get_db)):
 
 
 @router.put("/{id}")
+@limiter.limit("30/minute")
 def update_kependudukan(
+    request: Request,
     id: int,
     data: KependudukanUpdate,
     db: Session = Depends(get_db),
