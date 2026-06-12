@@ -52,8 +52,11 @@ cp .env.example .env
 # Edit .env with your database credentials:
 # DATABASE_URL=postgresql://postgres:yourpassword@localhost:5432/sig_prawoto
 
-# Import initial data
-python import_data.py
+# Seed older base data if the target database is empty
+python tools/legacy/import_data.py
+
+# Apply current revision files to existing rows
+python tools/scripts/apply_revision_data.py
 
 # Run backend server
 uvicorn main:app --reload --host 0.0.0.0 --port 8000
@@ -81,17 +84,13 @@ Frontend will run at: http://localhost:3000
 ```
 .
 ├── backend/
-│   ├── main.py              # FastAPI application
-│   ├── models.py            # SQLAlchemy models
-│   ├── database.py          # Database connection
-│   ├── import_data.py       # Data import script
-│   ├── routes/              # API routes
-│   │   ├── auth.py          # Authentication
-│   │   ├── fasilitas.py     # Fasilitas CRUD
-│   │   ├── umkm.py          # UMKM CRUD
-│   │   ├── wisata.py        # Wisata CRUD
-│   │   ├── sda.py           # SDA CRUD
-│   │   └── kependudukan.py  # Kependudukan CRUD
+│   ├── main.py              # Thin uvicorn entrypoint
+│   ├── app/                 # FastAPI application package
+│   │   ├── main.py          # Application setup and routers
+│   │   ├── models.py        # SQLAlchemy models
+│   │   ├── database.py      # Database connection
+│   │   └── routes/          # API routes
+│   ├── tools/               # Manual scripts, legacy imports, migrations
 │   ├── requirements.txt     # Python dependencies
 │   └── .env                 # Environment variables
 ├── frontend/
@@ -167,18 +166,18 @@ Frontend will run at: http://localhost:3000
 ## Development
 
 ### Adding New Features
-1. Create new model in `models.py`
-2. Create new route in `backend/routes/`
+1. Create new model in `backend/app/models.py`
+2. Create new route in `backend/app/routes/`
 3. Include router in `main.py`
 4. Update frontend to consume new API
 
 ### Database Migrations
 ```bash
 # After model changes, recreate tables
-python -c "from database import engine; from models import Base; Base.metadata.drop_all(engine); Base.metadata.create_all(engine)"
+python -c "from app.database import engine; from app.models import Base; Base.metadata.drop_all(engine); Base.metadata.create_all(engine)"
 
-# Re-import data
-python import_data.py
+# Re-apply current revision data
+python tools/scripts/apply_revision_data.py
 ```
 
 ## Troubleshooting
