@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import Optional
@@ -8,6 +8,7 @@ from app.routes.auth import get_current_admin
 from app.rate_limit import limiter
 from app.utils import sanitize_input
 from app.image_utils import compress_base64_image
+from app.pagination import DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, paginate_query
 
 router = APIRouter()
 
@@ -40,8 +41,16 @@ class UMKMUpdate(BaseModel):
 
 @router.get("/")
 @limiter.limit("100/minute")
-def get_all_umkm(request: Request, db: Session = Depends(get_db)):
-    return db.query(UMKM).all()
+def get_all_umkm(
+    request: Request,
+    page: Optional[int] = Query(None, ge=1),
+    limit: int = Query(DEFAULT_PAGE_SIZE, ge=1, le=MAX_PAGE_SIZE),
+    db: Session = Depends(get_db),
+):
+    query = db.query(UMKM).order_by(UMKM.id_umkm)
+    if page is None:
+        return query.all()
+    return paginate_query(query, page, limit)
 
 
 @router.get("/{id}")
