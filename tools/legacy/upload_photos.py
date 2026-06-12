@@ -1,9 +1,23 @@
 import base64
-import os
+import sys
 from pathlib import Path
 
+LEGACY_DIR = Path(__file__).resolve().parent
+BACKEND_DIR = LEGACY_DIR.parent.parent
+PROJECT_DIR = BACKEND_DIR.parent
+
+backend_path = str(BACKEND_DIR)
+if backend_path not in sys.path:
+    sys.path.insert(0, backend_path)
+
+from app.image_utils import (
+    TRUSTED_IMPORT_MAX_IMAGE_BYTES,
+    compress_base64_image,
+    get_image_size_kb,
+)
+
 # Photo directory
-FOTO_DIR = Path(__file__).parent.parent.parent / "foto wisata"
+FOTO_DIR = PROJECT_DIR.parent / "foto wisata"
 
 # Mapping of photo files to wisata names
 WISATA_PHOTOS = {
@@ -22,12 +36,17 @@ def image_to_base64(image_path):
         encoded = base64.b64encode(img_file.read()).decode('utf-8')
         # Determine MIME type
         ext = image_path.suffix.lower()
-        mime_type = "image/jpeg" if ext in [".jpg", ".jpeg"] else "image/png"
+        if ext == ".webp":
+            mime_type = "image/webp"
+        elif ext == ".png":
+            mime_type = "image/png"
+        else:
+            mime_type = "image/jpeg"
         return f"data:{mime_type};base64,{encoded}"
 
 def main():
-    from database import SessionLocal
-    from models_rev import Wisata, Desa, FotoWisata
+    from app.database import SessionLocal
+    from app.models import Wisata, Desa, FotoWisata
     
     db = SessionLocal()
     
@@ -48,7 +67,15 @@ def main():
             
             # Convert to base64
             print(f"  Converting {filename}...")
-            base64_data = image_to_base64(photo_path)
+            original_data = image_to_base64(photo_path)
+            base64_data = compress_base64_image(
+                original_data,
+                max_input_bytes=TRUSTED_IMPORT_MAX_IMAGE_BYTES,
+            )
+            print(
+                f"  Size: {get_image_size_kb(original_data):.1f} KB -> "
+                f"{get_image_size_kb(base64_data):.1f} KB"
+            )
             
             # Check if photo already exists
             existing_photo = db.query(FotoWisata).filter(
@@ -77,7 +104,15 @@ def main():
         profil_photo_path = FOTO_DIR / PROFIL_DESA_PHOTO
         if profil_photo_path.exists():
             print(f"  Converting {PROFIL_DESA_PHOTO}...")
-            base64_data = image_to_base64(profil_photo_path)
+            original_data = image_to_base64(profil_photo_path)
+            base64_data = compress_base64_image(
+                original_data,
+                max_input_bytes=TRUSTED_IMPORT_MAX_IMAGE_BYTES,
+            )
+            print(
+                f"  Size: {get_image_size_kb(original_data):.1f} KB -> "
+                f"{get_image_size_kb(base64_data):.1f} KB"
+            )
             
             desa = db.query(Desa).first()
             if desa:
