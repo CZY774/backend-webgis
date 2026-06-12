@@ -2,16 +2,14 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import Optional
-from database import get_db
-from models_rev import Wisata, FotoWisata
-from routes.auth import get_current_admin
-from slowapi import Limiter
-from slowapi.util import get_remote_address
-from utils import sanitize_input
-from image_utils import compress_base64_image
+from app.database import get_db
+from app.models import Wisata, FotoWisata
+from app.routes.auth import get_current_admin
+from app.rate_limit import limiter
+from app.utils import sanitize_input
+from app.image_utils import compress_base64_image
 
 router = APIRouter()
-limiter = Limiter(key_func=get_remote_address)
 
 
 class WisataCreate(BaseModel):
@@ -87,8 +85,12 @@ def get_wisata(request: Request, id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/")
+@limiter.limit("20/minute")
 def create_wisata(
-    data: WisataCreate, db: Session = Depends(get_db), admin=Depends(get_current_admin)
+    request: Request,
+    data: WisataCreate,
+    db: Session = Depends(get_db),
+    admin=Depends(get_current_admin),
 ):
     # Compress photo if provided
     foto_compressed = (
@@ -116,7 +118,9 @@ def create_wisata(
 
 
 @router.put("/{id}")
+@limiter.limit("30/minute")
 def update_wisata(
+    request: Request,
     id: int,
     data: WisataUpdate,
     db: Session = Depends(get_db),
@@ -154,8 +158,12 @@ def update_wisata(
 
 
 @router.delete("/{id}")
+@limiter.limit("20/minute")
 def delete_wisata(
-    id: int, db: Session = Depends(get_db), admin=Depends(get_current_admin)
+    request: Request,
+    id: int,
+    db: Session = Depends(get_db),
+    admin=Depends(get_current_admin),
 ):
     wisata = db.query(Wisata).filter(Wisata.id_wisata == id).first()
     if not wisata:
@@ -168,7 +176,9 @@ def delete_wisata(
 
 # Photo upload endpoints
 @router.post("/photo/upload")
+@limiter.limit("10/minute")
 def upload_foto_wisata(
+    request: Request,
     data: FotoWisataUpload,
     db: Session = Depends(get_db),
     admin=Depends(get_current_admin),
@@ -212,7 +222,9 @@ def get_wisata_photos(request: Request, id: int, db: Session = Depends(get_db)):
 
 
 @router.delete("/photo/{id_foto}")
+@limiter.limit("20/minute")
 def delete_foto_wisata(
+    request: Request,
     id_foto: int,
     db: Session = Depends(get_db),
     admin=Depends(get_current_admin),
