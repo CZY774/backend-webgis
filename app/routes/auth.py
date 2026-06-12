@@ -4,14 +4,12 @@ from sqlalchemy.orm import Session
 import bcrypt
 from jose import JWTError, jwt
 from datetime import datetime, timedelta
-from database import get_db
-from models_rev import Admin
+from app.database import get_db
+from app.models import Admin
 import os
-from slowapi import Limiter
-from slowapi.util import get_remote_address
+from app.rate_limit import limiter
 
 router = APIRouter()
-limiter = Limiter(key_func=get_remote_address)
 
 SECRET_KEY = os.getenv("SECRET_KEY")
 if not SECRET_KEY or SECRET_KEY == "your-secret-key-change-this-in-production":
@@ -75,7 +73,9 @@ def login(
 
 
 @router.post("/register")
+@limiter.limit("3/minute")
 def register(
+    request: Request,
     username: str,
     password: str,
     db: Session = Depends(get_db),
