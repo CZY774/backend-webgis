@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import Optional
@@ -7,6 +7,7 @@ from app.database import get_db
 from app.models import RW, RT, Kependudukan, KependudukanRT
 from app.routes.auth import get_current_admin
 from app.rate_limit import limiter
+from app.pagination import DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE
 import json
 
 router = APIRouter()
@@ -35,19 +36,31 @@ class KependudukanUpdate(BaseModel):
 
 @router.get("/")
 @limiter.limit("100/minute")
-def get_all_kependudukan(request: Request, db: Session = Depends(get_db)):
+def get_all_kependudukan(
+    request: Request,
+    page: Optional[int] = Query(None, ge=1),
+    limit: int = Query(DEFAULT_PAGE_SIZE, ge=1, le=MAX_PAGE_SIZE),
+    include_geometry: bool = Query(True),
+    db: Session = Depends(get_db),
+):
     result = []
     rt_count = db.query(KependudukanRT).count()
+    safe_page = max(page or 1, 1)
+    safe_limit = min(max(limit, 1), MAX_PAGE_SIZE)
 
     if rt_count:
-        rt_list = db.query(RT).order_by(RT.id_rw, RT.nomor_rt).all()
+        query = db.query(RT).order_by(RT.id_rw, RT.nomor_rt)
+        total = query.count()
+        if page is not None:
+            query = query.offset((safe_page - 1) * safe_limit).limit(safe_limit)
+
+        rt_list = query.all()
         for rt in rt_list:
             kependudukan = (
                 db.query(KependudukanRT)
                 .filter(KependudukanRT.id_rt == rt.id_rt)
                 .first()
             )
-            geom = to_shape(rt.polygon)
 
             rw = db.query(RW).filter(RW.id_rw == rt.id_rw).first()
             data = {
@@ -55,29 +68,46 @@ def get_all_kependudukan(request: Request, db: Session = Depends(get_db)):
                 "nomor_rt": rt.nomor_rt,
                 "id_rw": rt.id_rw,
                 "nomor_rw": rw.nomor_rw if rw else None,
-                "polygon": json.dumps(geom.__geo_interface__),
             }
+            if include_geometry:
+                geom = to_shape(rt.polygon)
+                data["polygon"] = json.dumps(geom.__geo_interface__)
 
             if kependudukan:
                 data.update(kependudukan_to_dict(kependudukan))
 
             result.append(data)
 
+        if page is not None:
+            return {
+                "items": result,
+                "page": safe_page,
+                "limit": safe_limit,
+                "total": total,
+                "total_pages": (total + safe_limit - 1) // safe_limit if total else 0,
+            }
+
         return result
 
-    rw_list = db.query(RW).all()
+    query = db.query(RW).order_by(RW.id_rw)
+    total = query.count()
+    if page is not None:
+        query = query.offset((safe_page - 1) * safe_limit).limit(safe_limit)
+
+    rw_list = query.all()
 
     for rw in rw_list:
         kependudukan = (
             db.query(Kependudukan).filter(Kependudukan.id_rw == rw.id_rw).first()
         )
-        geom = to_shape(rw.polygon)
 
         data = {
             "id_rw": rw.id_rw,
             "nomor_rw": rw.nomor_rw,
-            "polygon": json.dumps(geom.__geo_interface__),
         }
+        if include_geometry:
+            geom = to_shape(rw.polygon)
+            data["polygon"] = json.dumps(geom.__geo_interface__)
 
         if kependudukan:
             data.update(
@@ -106,6 +136,15 @@ def get_all_kependudukan(request: Request, db: Session = Depends(get_db)):
             )
 
         result.append(data)
+
+    if page is not None:
+        return {
+            "items": result,
+            "page": safe_page,
+            "limit": safe_limit,
+            "total": total,
+            "total_pages": (total + safe_limit - 1) // safe_limit if total else 0,
+        }
 
     return result
 
