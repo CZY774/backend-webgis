@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import Optional
@@ -8,6 +8,7 @@ from app.database import get_db
 from app.models import SDA
 from app.routes.auth import get_current_admin
 from app.rate_limit import limiter
+from app.pagination import DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, paginate_query
 import json
 
 router = APIRouter()
@@ -27,22 +28,33 @@ class SDAUpdate(BaseModel):
 
 @router.get("/")
 @limiter.limit("100/minute")
-def get_all_sda(request: Request, db: Session = Depends(get_db)):
-    sda_list = db.query(SDA).all()
-    result = []
-    for sda in sda_list:
+def get_all_sda(
+    request: Request,
+    page: Optional[int] = Query(None, ge=1),
+    limit: int = Query(DEFAULT_PAGE_SIZE, ge=1, le=MAX_PAGE_SIZE),
+    include_geometry: bool = Query(True),
+    db: Session = Depends(get_db),
+):
+    query = db.query(SDA).order_by(SDA.id_sda)
+
+    def serialize_sda(sda):
+        data = {
+            "id_sda": sda.id_sda,
+            "jenis_lahan": sda.jenis_lahan,
+            "luas_ha": float(sda.luas_ha),
+            "created_at": sda.created_at,
+            "updated_at": sda.updated_at,
+        }
+        if not include_geometry:
+            return data
+
         geom = to_shape(sda.polygon)
-        result.append(
-            {
-                "id_sda": sda.id_sda,
-                "polygon": json.dumps(geom.__geo_interface__),
-                "jenis_lahan": sda.jenis_lahan,
-                "luas_ha": float(sda.luas_ha),
-                "created_at": sda.created_at,
-                "updated_at": sda.updated_at,
-            }
-        )
-    return result
+        data["polygon"] = json.dumps(geom.__geo_interface__)
+        return data
+
+    if page is None:
+        return [serialize_sda(sda) for sda in query.all()]
+    return paginate_query(query, page, limit, serialize_sda)
 
 
 @router.get("/{id}")
