@@ -2,15 +2,14 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import Optional
-from database import get_db
-from models_rev import Fasilitas
-from routes.auth import get_current_admin
-from slowapi import Limiter
-from slowapi.util import get_remote_address
-from utils import sanitize_input
+from app.database import get_db
+from app.models import Fasilitas
+from app.routes.auth import get_current_admin
+from app.rate_limit import limiter
+from app.utils import sanitize_input
+from app.image_utils import compress_base64_image
 
 router = APIRouter()
-limiter = Limiter(key_func=get_remote_address)
 
 
 class FasilitasCreate(BaseModel):
@@ -22,6 +21,7 @@ class FasilitasCreate(BaseModel):
     lokasi: Optional[str] = None
     jam_operasional: Optional[str] = None
     fasilitas_pendukung: Optional[str] = None
+    foto_base64: Optional[str] = None
 
 
 class FasilitasUpdate(BaseModel):
@@ -33,6 +33,7 @@ class FasilitasUpdate(BaseModel):
     lokasi: Optional[str] = None
     jam_operasional: Optional[str] = None
     fasilitas_pendukung: Optional[str] = None
+    foto_base64: Optional[str] = None
 
 
 @router.get("/")
@@ -51,7 +52,9 @@ def get_fasilitas(request: Request, id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/")
+@limiter.limit("20/minute")
 def create_fasilitas(
+    request: Request,
     data: FasilitasCreate,
     db: Session = Depends(get_db),
     admin=Depends(get_current_admin),
@@ -69,6 +72,9 @@ def create_fasilitas(
         fasilitas_pendukung=sanitize_input(data.fasilitas_pendukung)
         if data.fasilitas_pendukung
         else None,
+        foto_base64=compress_base64_image(data.foto_base64)
+        if data.foto_base64
+        else None,
         created_by=admin.id_admin,
         updated_by=admin.id_admin,
     )
@@ -79,7 +85,9 @@ def create_fasilitas(
 
 
 @router.put("/{id}")
+@limiter.limit("30/minute")
 def update_fasilitas(
+    request: Request,
     id: int,
     data: FasilitasUpdate,
     db: Session = Depends(get_db),
@@ -105,6 +113,10 @@ def update_fasilitas(
         fasilitas.jam_operasional = sanitize_input(data.jam_operasional)
     if data.fasilitas_pendukung is not None:
         fasilitas.fasilitas_pendukung = sanitize_input(data.fasilitas_pendukung)
+    if data.foto_base64 is not None:
+        fasilitas.foto_base64 = (
+            compress_base64_image(data.foto_base64) if data.foto_base64 else None
+        )
 
     fasilitas.updated_by = admin.id_admin
     db.commit()
@@ -113,8 +125,12 @@ def update_fasilitas(
 
 
 @router.delete("/{id}")
+@limiter.limit("20/minute")
 def delete_fasilitas(
-    id: int, db: Session = Depends(get_db), admin=Depends(get_current_admin)
+    request: Request,
+    id: int,
+    db: Session = Depends(get_db),
+    admin=Depends(get_current_admin),
 ):
     fasilitas = db.query(Fasilitas).filter(Fasilitas.id_fasilitas == id).first()
     if not fasilitas:
