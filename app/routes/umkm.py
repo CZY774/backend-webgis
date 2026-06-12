@@ -2,15 +2,14 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import Optional
-from database import get_db
-from models_rev import UMKM
-from routes.auth import get_current_admin
-from slowapi import Limiter
-from slowapi.util import get_remote_address
-from utils import sanitize_input
+from app.database import get_db
+from app.models import UMKM
+from app.routes.auth import get_current_admin
+from app.rate_limit import limiter
+from app.utils import sanitize_input
+from app.image_utils import compress_base64_image
 
 router = APIRouter()
-limiter = Limiter(key_func=get_remote_address)
 
 
 class UMKMCreate(BaseModel):
@@ -23,6 +22,7 @@ class UMKMCreate(BaseModel):
     produk: Optional[str] = None
     jam_operasional: Optional[str] = None
     fasilitas_pendukung: Optional[str] = None
+    foto_base64: Optional[str] = None
 
 
 class UMKMUpdate(BaseModel):
@@ -35,6 +35,7 @@ class UMKMUpdate(BaseModel):
     produk: Optional[str] = None
     jam_operasional: Optional[str] = None
     fasilitas_pendukung: Optional[str] = None
+    foto_base64: Optional[str] = None
 
 
 @router.get("/")
@@ -53,8 +54,12 @@ def get_umkm(request: Request, id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/")
+@limiter.limit("20/minute")
 def create_umkm(
-    data: UMKMCreate, db: Session = Depends(get_db), admin=Depends(get_current_admin)
+    request: Request,
+    data: UMKMCreate,
+    db: Session = Depends(get_db),
+    admin=Depends(get_current_admin),
 ):
     umkm = UMKM(
         latitude=data.latitude,
@@ -70,6 +75,9 @@ def create_umkm(
         fasilitas_pendukung=sanitize_input(data.fasilitas_pendukung)
         if data.fasilitas_pendukung
         else None,
+        foto_base64=compress_base64_image(data.foto_base64)
+        if data.foto_base64
+        else None,
         created_by=admin.id_admin,
         updated_by=admin.id_admin,
     )
@@ -80,7 +88,9 @@ def create_umkm(
 
 
 @router.put("/{id}")
+@limiter.limit("30/minute")
 def update_umkm(
+    request: Request,
     id: int,
     data: UMKMUpdate,
     db: Session = Depends(get_db),
@@ -108,6 +118,10 @@ def update_umkm(
         umkm.jam_operasional = sanitize_input(data.jam_operasional)
     if data.fasilitas_pendukung is not None:
         umkm.fasilitas_pendukung = sanitize_input(data.fasilitas_pendukung)
+    if data.foto_base64 is not None:
+        umkm.foto_base64 = (
+            compress_base64_image(data.foto_base64) if data.foto_base64 else None
+        )
 
     umkm.updated_by = admin.id_admin
     db.commit()
@@ -116,8 +130,12 @@ def update_umkm(
 
 
 @router.delete("/{id}")
+@limiter.limit("20/minute")
 def delete_umkm(
-    id: int, db: Session = Depends(get_db), admin=Depends(get_current_admin)
+    request: Request,
+    id: int,
+    db: Session = Depends(get_db),
+    admin=Depends(get_current_admin),
 ):
     umkm = db.query(UMKM).filter(UMKM.id_umkm == id).first()
     if not umkm:
