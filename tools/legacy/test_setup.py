@@ -3,6 +3,16 @@
 
 import sys
 import os
+from pathlib import Path
+
+LEGACY_DIR = Path(__file__).resolve().parent
+BACKEND_DIR = LEGACY_DIR.parent.parent
+PROJECT_DIR = BACKEND_DIR.parent
+
+for path in (BACKEND_DIR, LEGACY_DIR):
+    path_str = str(path)
+    if path_str not in sys.path:
+        sys.path.insert(0, path_str)
 
 print("=== Testing SIG Desa Prawoto Setup ===\n")
 
@@ -27,7 +37,7 @@ except ImportError as e:
 print("\n2. Checking environment configuration...")
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(BACKEND_DIR / ".env")
 
 db_url = os.getenv("DATABASE_URL")
 secret_key = os.getenv("SECRET_KEY")
@@ -49,7 +59,7 @@ else:
 # Test 3: Check database connection
 print("\n3. Testing database connection...")
 try:
-    from database import engine
+    from app.database import engine
 
     with engine.connect() as conn:
         result = conn.execute(sqlalchemy.text("SELECT version()"))
@@ -87,12 +97,12 @@ try:
 
     if missing_tables:
         print(f"   ⚠️  Missing tables: {', '.join(missing_tables)}")
-        print("   Run: python import_data.py")
+        print("   Run from backend/: python tools/legacy/import_data.py")
     else:
         print("   ✓ All tables exist")
 
         # Check data
-        from database import SessionLocal
+        from app.database import SessionLocal
 
         db = SessionLocal()
         from models import Fasilitas, UMKM, Wisata, SDA, RW, Admin
@@ -132,7 +142,7 @@ data_files = [
 
 missing = []
 for file in data_files:
-    if not os.path.exists(f"../{file}"):
+    if not (PROJECT_DIR / file).exists():
         missing.append(file)
 
 if missing:
@@ -142,5 +152,5 @@ else:
 
 print("\n=== Test Complete ===")
 print("\nTo run the application:")
-print("  Backend:  uvicorn main:app --reload")
-print("  Frontend: cd ../frontend && python3 -m http.server 3000")
+print("  Backend:  cd backend && uvicorn main:app --reload")
+print("  Frontend: cd frontend && python3 -m http.server 3000")
