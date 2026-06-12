@@ -1,11 +1,18 @@
 import sys
-import os
+from pathlib import Path
 
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+LEGACY_DIR = Path(__file__).resolve().parent
+BACKEND_DIR = LEGACY_DIR.parent.parent
+PROJECT_DIR = BACKEND_DIR.parent
+DATA_WEB_DIR = PROJECT_DIR.parent / "10. Data Web"
+
+backend_path = str(BACKEND_DIR)
+if backend_path not in sys.path:
+    sys.path.insert(0, backend_path)
 
 # Use the new models file
-import models_rev as models
-from database import SessionLocal, engine
+import app.models as models
+from app.database import SessionLocal, engine
 from geoalchemy2.shape import from_shape
 from shapely.geometry import shape
 from shapely import wkt
@@ -28,7 +35,7 @@ print("Importing data from revised files...")
 
 # Import Fasilitas
 print("\n1. Importing Fasilitas...")
-wb = openpyxl.load_workbook("../../10. Data Web/2. Fasilitas/Fasilitas_rev.xlsx")
+wb = openpyxl.load_workbook(DATA_WEB_DIR / "2. Fasilitas" / "Fasilitas_rev.xlsx")
 ws = wb.active
 rows = list(ws.iter_rows(values_only=True))
 for row in rows[1:]:  # Skip header
@@ -41,7 +48,7 @@ print(f"✓ Imported {len(rows) - 1} fasilitas")
 
 # Import UMKM
 print("\n2. Importing UMKM...")
-wb = openpyxl.load_workbook("../../10. Data Web/3. UMKM/UMKM_rev.xlsx")
+wb = openpyxl.load_workbook(DATA_WEB_DIR / "3. UMKM" / "UMKM_rev.xlsx")
 ws = wb.active
 rows = list(ws.iter_rows(values_only=True))
 for row in rows[1:]:  # Skip header
@@ -52,7 +59,7 @@ print(f"✓ Imported {len(rows) - 1} UMKM")
 
 # Import Wisata
 print("\n3. Importing Wisata...")
-wb = openpyxl.load_workbook("../../10. Data Web/1. Wisata/Wisata_rev.xlsx")
+wb = openpyxl.load_workbook(DATA_WEB_DIR / "1. Wisata" / "Wisata_rev.xlsx")
 ws = wb.active
 rows = list(ws.iter_rows(values_only=True))
 for row in rows[1:]:  # Skip header
@@ -71,7 +78,9 @@ print(f"✓ Imported {len(rows) - 1} wisata")
 print("\n4. Importing SDA (Land Use)...")
 
 # Load the mapping from ini warnanya.xlsx
-wb = openpyxl.load_workbook("../../10. Data Web/4. Penggunaan Lahan/ini warnanya.xlsx")
+wb = openpyxl.load_workbook(
+    DATA_WEB_DIR / "4. Penggunaan Lahan" / "ini warnanya.xlsx"
+)
 ws = wb.active
 nomor_to_jenis = {}
 for row in ws.iter_rows(values_only=True):
@@ -79,7 +88,9 @@ for row in ws.iter_rows(values_only=True):
         nomor_to_jenis[str(row[0])] = row[1]
 
 # Import lahan.geojson with mapping
-with open("../../10. Data Web/4. Penggunaan Lahan/lahan.geojson", "r") as f:
+with (DATA_WEB_DIR / "4. Penggunaan Lahan" / "lahan.geojson").open(
+    "r", encoding="utf-8"
+) as f:
     data = json.load(f)
     total_sda = 0
     skipped = 0
@@ -112,7 +123,9 @@ if skipped > 0:
 
 # Import Jalan (Roads)
 print("\n5. Importing Jalan (Roads)...")
-with open("../../10. Data Web/4. Penggunaan Lahan/jalan.geojson", "r") as f:
+with (DATA_WEB_DIR / "4. Penggunaan Lahan" / "jalan.geojson").open(
+    "r", encoding="utf-8"
+) as f:
     data = json.load(f)
     for feature in data["features"]:
         props = feature["properties"]
@@ -131,7 +144,9 @@ print(f"✓ Imported {len(data['features'])} jalan")
 
 # Import Sungai (Rivers)
 print("\n6. Importing Sungai (Rivers)...")
-with open("../../10. Data Web/4. Penggunaan Lahan/sungai.geojson", "r") as f:
+with (DATA_WEB_DIR / "4. Penggunaan Lahan" / "sungai.geojson").open(
+    "r", encoding="utf-8"
+) as f:
     data = json.load(f)
     for feature in data["features"]:
         geom = force_2d(shape(feature["geometry"]))
@@ -146,7 +161,9 @@ existing_rw = db.query(models.RW).count()
 if existing_rw > 0:
     print(f"✓ RW data already exists ({existing_rw} records), skipping...")
 else:
-    with open("../../10. Data Web/5. Kependudukan/Batas_RW.geojson", "r") as f:
+    with (DATA_WEB_DIR / "5. Kependudukan" / "Batas_RW.geojson").open(
+        "r", encoding="utf-8"
+    ) as f:
         data = json.load(f)
         for feature in data["features"]:
             rw_num = feature["properties"]["rw"]  # Use 'rw' property, not 'id'
@@ -159,7 +176,9 @@ else:
 
 # Import RT
 print("\n8. Importing RT...")
-with open("../../10. Data Web/5. Kependudukan/Batas_RT.geojson", "r") as f:
+with (DATA_WEB_DIR / "5. Kependudukan" / "Batas_RT.geojson").open(
+    "r", encoding="utf-8"
+) as f:
     data = json.load(f)
     for feature in data["features"]:
         props = feature["properties"]
@@ -179,7 +198,9 @@ print(f"✓ Imported {len(data['features'])} RT polygons")
 
 # Import Desa (Village Boundary)
 print("\n9. Importing Desa (Village Boundary)...")
-with open("../../10. Data Web/5. Kependudukan/Batas_Desa.geojson", "r") as f:
+with (DATA_WEB_DIR / "5. Kependudukan" / "Batas_Desa.geojson").open(
+    "r", encoding="utf-8"
+) as f:
     data = json.load(f)
     for feature in data["features"]:
         props = feature["properties"]
@@ -206,7 +227,7 @@ if existing_kependudukan > 0:
     )
 else:
     wb = openpyxl.load_workbook(
-        "../../10. Data Web/5. Kependudukan/Kependudukan_rev.xlsx"
+        DATA_WEB_DIR / "5. Kependudukan" / "Kependudukan_rev.xlsx"
     )
     ws = wb.active
     rows = list(ws.iter_rows(values_only=True))
