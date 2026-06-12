@@ -1,14 +1,12 @@
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy.orm import Session
 from geoalchemy2.shape import to_shape
-from database import get_db
-from models_rev import Jalan
-from slowapi import Limiter
-from slowapi.util import get_remote_address
+from app.database import get_db
+from app.models import Jalan
+from app.rate_limit import limiter
 import json
 
 router = APIRouter()
-limiter = Limiter(key_func=get_remote_address)
 
 
 @router.get("/")
