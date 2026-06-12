@@ -10,7 +10,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.sql import func
 from geoalchemy2 import Geometry
-from database import Base
+from app.database import Base
 
 
 class Admin(Base):
@@ -35,6 +35,7 @@ class Fasilitas(Base):
     lokasi = Column(Text, nullable=True)
     jam_operasional = Column(String(100), nullable=True)
     fasilitas_pendukung = Column(Text, nullable=True)
+    foto_base64 = Column(Text, nullable=True)
     created_by = Column(Integer, ForeignKey("admin.id_admin"), nullable=True)
     updated_by = Column(Integer, ForeignKey("admin.id_admin"), nullable=True)
     created_at = Column(TIMESTAMP, server_default=func.now())
@@ -54,6 +55,7 @@ class UMKM(Base):
     produk = Column(Text, nullable=True)
     jam_operasional = Column(String(100), nullable=True)
     fasilitas_pendukung = Column(Text, nullable=True)
+    foto_base64 = Column(Text, nullable=True)
     created_by = Column(Integer, ForeignKey("admin.id_admin"), nullable=True)
     updated_by = Column(Integer, ForeignKey("admin.id_admin"), nullable=True)
     created_at = Column(TIMESTAMP, server_default=func.now())
