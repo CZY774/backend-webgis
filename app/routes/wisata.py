@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import Optional
@@ -8,6 +8,7 @@ from app.routes.auth import get_current_admin
 from app.rate_limit import limiter
 from app.utils import sanitize_input
 from app.image_utils import compress_base64_image
+from app.pagination import DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, paginate_query
 
 router = APIRouter()
 
@@ -45,34 +46,41 @@ class FotoWisataUpload(BaseModel):
 
 @router.get("/")
 @limiter.limit("100/minute")
-def get_all_wisata(request: Request, db: Session = Depends(get_db)):
-    wisata_list = db.query(Wisata).all()
-    result = []
-    for w in wisata_list:
-        # Get first photo if exists
+def get_all_wisata(
+    request: Request,
+    page: Optional[int] = Query(None, ge=1),
+    limit: int = Query(DEFAULT_PAGE_SIZE, ge=1, le=MAX_PAGE_SIZE),
+    db: Session = Depends(get_db),
+):
+    query = db.query(Wisata).order_by(Wisata.id_wisata)
+
+    def serialize_wisata(wisata):
         first_photo = (
-            db.query(FotoWisata).filter(FotoWisata.id_wisata == w.id_wisata).first()
+            db.query(FotoWisata)
+            .filter(FotoWisata.id_wisata == wisata.id_wisata)
+            .first()
         )
-        result.append(
-            {
-                "id_wisata": w.id_wisata,
-                "nama": w.nama,
-                "jenis": w.jenis,
-                "deskripsi": w.deskripsi,
-                "cagar_budaya": w.cagar_budaya,
-                "lokasi": w.lokasi,
-                "tarif": w.tarif,
-                "fasilitas": w.fasilitas,
-                "latitude": w.latitude,
-                "longitude": w.longitude,
-                "foto_base64": first_photo.foto_base64
-                if first_photo
-                else w.foto_base64,
-                "created_at": w.created_at,
-                "updated_at": w.updated_at,
-            }
-        )
-    return result
+        return {
+            "id_wisata": wisata.id_wisata,
+            "nama": wisata.nama,
+            "jenis": wisata.jenis,
+            "deskripsi": wisata.deskripsi,
+            "cagar_budaya": wisata.cagar_budaya,
+            "lokasi": wisata.lokasi,
+            "tarif": wisata.tarif,
+            "fasilitas": wisata.fasilitas,
+            "latitude": wisata.latitude,
+            "longitude": wisata.longitude,
+            "foto_base64": first_photo.foto_base64
+            if first_photo
+            else wisata.foto_base64,
+            "created_at": wisata.created_at,
+            "updated_at": wisata.updated_at,
+        }
+
+    if page is None:
+        return [serialize_wisata(wisata) for wisata in query.all()]
+    return paginate_query(query, page, limit, serialize_wisata)
 
 
 @router.get("/{id}")
