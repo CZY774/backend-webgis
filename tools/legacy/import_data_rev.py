@@ -78,9 +78,7 @@ print(f"✓ Imported {len(rows) - 1} wisata")
 print("\n4. Importing SDA (Land Use)...")
 
 # Load the mapping from ini warnanya.xlsx
-wb = openpyxl.load_workbook(
-    DATA_WEB_DIR / "4. Penggunaan Lahan" / "ini warnanya.xlsx"
-)
+wb = openpyxl.load_workbook(DATA_WEB_DIR / "4. Penggunaan Lahan" / "ini warnanya.xlsx")
 ws = wb.active
 nomor_to_jenis = {}
 for row in ws.iter_rows(values_only=True):
