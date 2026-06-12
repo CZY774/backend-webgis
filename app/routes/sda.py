@@ -4,15 +4,13 @@ from pydantic import BaseModel
 from typing import Optional
 from geoalchemy2.shape import to_shape, from_shape
 from shapely.geometry import shape
-from database import get_db
-from models_rev import SDA
-from routes.auth import get_current_admin
-from slowapi import Limiter
-from slowapi.util import get_remote_address
+from app.database import get_db
+from app.models import SDA
+from app.routes.auth import get_current_admin
+from app.rate_limit import limiter
 import json
 
 router = APIRouter()
-limiter = Limiter(key_func=get_remote_address)
 
 
 class SDACreate(BaseModel):
@@ -66,8 +64,12 @@ def get_sda(request: Request, id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/")
+@limiter.limit("15/minute")
 def create_sda(
-    data: SDACreate, db: Session = Depends(get_db), admin=Depends(get_current_admin)
+    request: Request,
+    data: SDACreate,
+    db: Session = Depends(get_db),
+    admin=Depends(get_current_admin),
 ):
     geom = shape(data.polygon)
     sda = SDA(
@@ -84,7 +86,9 @@ def create_sda(
 
 
 @router.put("/{id}")
+@limiter.limit("20/minute")
 def update_sda(
+    request: Request,
     id: int,
     data: SDAUpdate,
     db: Session = Depends(get_db),
@@ -109,8 +113,12 @@ def update_sda(
 
 
 @router.delete("/{id}")
+@limiter.limit("15/minute")
 def delete_sda(
-    id: int, db: Session = Depends(get_db), admin=Depends(get_current_admin)
+    request: Request,
+    id: int,
+    db: Session = Depends(get_db),
+    admin=Depends(get_current_admin),
 ):
     sda = db.query(SDA).filter(SDA.id_sda == id).first()
     if not sda:
