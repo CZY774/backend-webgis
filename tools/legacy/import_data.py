@@ -1,9 +1,17 @@
 import sys
-import os
+from pathlib import Path
 
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+LEGACY_DIR = Path(__file__).resolve().parent
+BACKEND_DIR = LEGACY_DIR.parent.parent
+PROJECT_DIR = BACKEND_DIR.parent
+OLD_DATA_DIR = PROJECT_DIR
 
-from database import SessionLocal, engine
+for path in (BACKEND_DIR, LEGACY_DIR):
+    path_str = str(path)
+    if path_str not in sys.path:
+        sys.path.insert(0, path_str)
+
+from app.database import SessionLocal, engine
 from models import Base, Fasilitas, UMKM, Wisata, SDA, RW, Kependudukan
 from geoalchemy2.shape import from_shape
 from shapely.geometry import shape
@@ -19,7 +27,7 @@ print("Importing data...")
 
 # Import Fasilitas
 print("\n1. Importing Fasilitas...")
-wb = openpyxl.load_workbook("../Fasilitas.xlsx")
+wb = openpyxl.load_workbook(OLD_DATA_DIR / "Fasilitas.xlsx")
 ws = wb.active
 rows = list(ws.iter_rows(values_only=True))
 for row in rows[1:]:  # Skip header
@@ -30,7 +38,7 @@ print(f"✓ Imported {len(rows) - 1} fasilitas")
 
 # Import UMKM
 print("\n2. Importing UMKM...")
-wb = openpyxl.load_workbook("../UMKM.xlsx")
+wb = openpyxl.load_workbook(OLD_DATA_DIR / "UMKM.xlsx")
 ws = wb.active
 rows = list(ws.iter_rows(values_only=True))
 for row in rows[1:]:  # Skip header
@@ -41,7 +49,7 @@ print(f"✓ Imported {len(rows) - 1} UMKM")
 
 # Import Wisata
 print("\n3. Importing Wisata...")
-wb = openpyxl.load_workbook("../Wisata.xlsx")
+wb = openpyxl.load_workbook(OLD_DATA_DIR / "Wisata.xlsx")
 ws = wb.active
 rows = list(ws.iter_rows(values_only=True))
 for row in rows[1:]:  # Skip header
@@ -62,7 +70,7 @@ sda_files = ["Sawah", "Kebun", "Ladang", "Pemukiman"]
 total_sda = 0
 
 for jenis in sda_files:
-    with open(f"../{jenis}.geojson", "r") as f:
+    with (OLD_DATA_DIR / f"{jenis}.geojson").open("r", encoding="utf-8") as f:
         data = json.load(f)
         for feature in data["features"]:
             geom = shape(feature["geometry"])
@@ -89,7 +97,7 @@ existing_rw = db.query(RW).count()
 if existing_rw > 0:
     print(f"✓ RW data already exists ({existing_rw} records), skipping...")
 else:
-    with open("../BatasRW.geojson", "r") as f:
+    with (OLD_DATA_DIR / "BatasRW.geojson").open("r", encoding="utf-8") as f:
         data = json.load(f)
         for feature in data["features"]:
             rw_id = feature["properties"]["id"]
@@ -112,7 +120,7 @@ if existing_kependudukan > 0:
         f"✓ Kependudukan data already exists ({existing_kependudukan} records), skipping..."
     )
 else:
-    wb = openpyxl.load_workbook("../Kependudukan.xlsx")
+    wb = openpyxl.load_workbook(OLD_DATA_DIR / "Kependudukan.xlsx")
     ws = wb.active
     rows = list(ws.iter_rows(values_only=True))
 
